@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>预测结果对比</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+      background: #f5f6f7;
+      color: #1d2129;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e5e6eb;
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid #e5e6eb;
+      padding: 0 16px;
+      background: #fff;
+    }
+    .tab {
+      padding: 14px 20px;
+      font-size: 14px;
+      color: #86909c;
+      cursor: pointer;
+      border: none;
+      background: none;
+      position: relative;
+    }
+    .tab:hover { color: #4e5969; }
+    .tab.active {
+      color: #4080ff;
+      font-weight: 500;
+    }
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      bottom: 0;
+      height: 2px;
+      background: #4080ff;
+      border-radius: 1px 1px 0 0;
+    }
+
+    .panel { padding: 0; }
+    .panel.hidden { display: none; }
+
+    .table-scroll { overflow-x: auto; }
+    table.result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .result-table thead th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #f7f8fa;
+      color: #4e5969;
+      font-weight: 500;
+      border-bottom: 1px solid #e5e6eb;
+      white-space: nowrap;
+    }
+    .result-table tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+      color: #1d2129;
+    }
+    .result-table tbody tr.data-row:hover {
+      background: #e8f4ff;
+    }
+    .result-table tbody tr.row-miss {
+      background: #fff2f0;
+    }
+    .result-table tbody tr.row-miss:hover {
+      background: #ffe8e6 !important;
+    }
+    .result-table tbody tr.row-miss td {
+      color: #1d2129;
+    }
+
+    .result-table tbody tr.data-row.row-expandable {
+      cursor: pointer;
+    }
+    .result-table tbody tr.data-row.row-expandable:hover {
+      background: #e8f4ff;
+    }
+    .result-table tbody tr.row-miss.row-expandable:hover {
+      background: #ffe8e6 !important;
+    }
+
+    /* 多预测：展开入口放在「字段」列，避免挤压预测列 */
+    .field-cell-expand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      vertical-align: middle;
+    }
+    .field-name { font-weight: 500; color: #1d2129; }
+    .multi-extra {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .multi-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 20px;
+      padding: 0 7px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #246bfd;
+      background: linear-gradient(180deg, #f5f9ff 0%, #eef4ff 100%);
+      border: 1px solid #c9d9ff;
+      border-radius: 999px;
+      line-height: 1;
+    }
+    .field-chevron {
+      display: inline-block;
+      font-size: 9px;
+      line-height: 1;
+      color: #86909c;
+      transition: transform .2s ease;
+    }
+    .result-table tbody tr.data-row.expanded .field-chevron {
+      transform: rotate(180deg);
+    }
+
+    .cell-tip {
+      cursor: help;
+      border-bottom: 1px dashed transparent;
+    }
+    .cell-tip:hover {
+      border-bottom-color: #4080ff;
+      color: #165dff;
+    }
+
+    .tip-anchor {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+    }
+    .tip-anchor[data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 0;
+      bottom: 100%;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      background: #1d2129;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.5;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      max-width: min(360px, 85vw);
+      z-index: 50;
+      box-shadow: 0 4px 12px rgba(0,0,0,.15);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s;
+    }
+    .tip-anchor[data-tip]::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      bottom: 100%;
+      margin-bottom: 2px;
+      border: 6px solid transparent;
+      border-top-color: #1d2129;
+      opacity: 0;
+      z-index: 51;
+      transition: opacity .15s;
+    }
+    .tip-anchor[data-tip]:hover::after,
+    .tip-anchor[data-tip]:hover::before {
+      opacity: 1;
+    }
+
+    .col-hit {
+      white-space: nowrap;
+      color: #4e5969;
+      font-size: 12px;
+    }
+    .hit-edit { color: #0d7a3e; }
+    .hit-llm { color: #722ed1; }
+    .hit-miss { color: #cf1322; font-weight: 600; }
+
+    /* 展开区：与主表同列宽、同字号/边距，不再使用嵌套表格 */
+    .result-table tbody tr.detail-sub {
+      display: none;
+      background: #fafbfc;
+    }
+    .result-table tbody tr.detail-sub > td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+      font-size: 13px;
+      color: #1d2129;
+    }
+    .result-table tbody tr.detail-sub-banner > td {
+      padding: 8px 14px;
+      background: #f7f8fa;
+      color: #4e5969;
+      font-weight: 500;
+      border-bottom: 1px solid #e5e6eb;
+    }
+    .result-table tbody tr.detail-sub-line:hover > td {
+      background: #f0f7ff;
+    }
+    .result-table tbody tr.detail-sub-line > td:first-child {
+      box-shadow: inset 3px 0 0 #b5c7ff;
+      padding-left: 18px;
+    }
+    .detail-sub-cap {
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+    .detail-sub-cap .sub-meta {
+      color: #c9cdd4;
+      margin: 0 6px;
+      font-weight: 400;
+    }
+    .detail-sub-cap em {
+      font-style: normal;
+      color: #246bfd;
+      font-weight: 600;
+    }
+    .sub-pred-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #fff;
+      border: 1px solid #e5e6eb;
+      font-size: 12px;
+      color: #4e5969;
+    }
+    .sub-dash {
+      color: #c0c4cc;
+    }
+    .sub-pred-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .sub-raw-line {
+      font-size: 12px;
+      color: #86909c;
+      line-height: 1.4;
+    }
+
+    .json-panel {
+      padding: 16px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: "SF Mono", Menlo, Monaco, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow: auto;
+      max-height: 70vh;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="tabs">
+    <button type="button" class="tab active" data-panel="result">预测结果</button>
+    <button type="button" class="tab" data-panel="json">JSON</button>
+  </div>
+
+  <div id="panel-result" class="panel">
+    <div class="table-scroll">
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th style="width: 12%">字段</th>
+            <th style="width: 22%">标注</th>
+            <th style="min-width: 200px">星巴克抽取-qianfanocr-1-qianfan-ocr-fast</th>
+            <th style="width: 14%">命中阶段</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="panel-json" class="panel hidden">
+    <pre class="json-panel" id="jsonOut"></pre>
+  </div>
+</div>
+
+<script>
+  /**
+   * 单行：displayAnn / displayPred / hitStage / raw*
+   * 多预测：predictions: [{ predLabel, displayPred, rawPred, hitStage }]
+   *   主行：在「命中」中随机展示一条；全无命中则展示预测1
+   *   其余：点击展开
+   */
+  const rows = [
+    {
+      field: "编号",
+      displayAnn: "ST202303210060",
+      rawAnn: "ST202303210060",
+      displayPred: "ST202303210060",
+      rawPred: "ST202303210060",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "开始日期",
+      displayAnn: "2023-03-21",
+      rawAnn: "2023.3.21",
+      displayPred: "2023-03-21",
+      rawPred: "2023年3月21日",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "结束日期",
+      displayAnn: "2024-03-21",
+      rawAnn: "2024年3月21日",
+      displayPred: "2024-03-21",
+      rawPred: "2024.03.21",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "有效日期",
+      displayAnn: "-",
+      rawAnn: "-",
+      displayPred: "2023-03-21至2024-03-21",
+      rawPred: "2023年3月21日至2024年3月21日",
+      hitStage: "未命中"
+    },
+    {
+      field: "省级行政区",
+      displayAnn: "山西",
+      rawAnn: "山西",
+      displayPred: "山西",
+      rawPred: "山西省",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "城市",
+      displayAnn: "临汾",
+      rawAnn: "临汾市",
+      displayPred: "临汾",
+      rawPred: "临汾",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "姓名",
+      displayAnn: "刘某燕",
+      rawAnn: "刘某燕",
+      predictions: [
+        { predLabel: "预测值1", displayPred: "刘", rawPred: "刘某某", hitStage: "未命中" },
+        { predLabel: "预测值2", displayPred: "刘刘飞燕", rawPred: "刘飞燕", hitStage: "大模型语义命中" },
+        { predLabel: "预测值3", displayPred: "刘某某", rawPred: "刘某", hitStage: "未命中" }
+      ]
+    },
+    {
+      field: "年龄",
+      displayAnn: "30",
+      rawAnn: "30岁",
+      displayPred: "30",
+      rawPred: "30岁",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "性别",
+      displayAnn: "女",
+      rawAnn: "女",
+      displayPred: "女",
+      rawPred: "女性",
+      hitStage: "编辑距离命中"
+    },
+    {
+      field: "工种",
+      displayAnn: "-",
+      rawAnn: "-",
+      displayPred: "None",
+      rawPred: "—",
+      hitStage: "大模型语义命中"
+    }
+  ];
+
+  function tipAnn(raw) {
+    return "原始标注值：\n" + raw;
+  }
+  function tipPred(raw) {
+    return "原始预测值：\n" + raw;
+  }
+
+  function hitClass(stage) {
+    if (stage === "未命中") return "hit-miss";
+    if (stage === "大模型语义命中") return "hit-llm";
+    return "hit-edit";
+  }
+
+  /** 多预测：主行下标与「其余」列表 */
+  function pickMainPredictionIndex(predictions) {
+    const hitIdx = [];
+    predictions.forEach((p, i) => {
+      if (p.hitStage !== "未命中") hitIdx.push(i);
+    });
+    if (hitIdx.length > 0) {
+      return hitIdx[Math.floor(Math.random() * hitIdx.length)];
+    }
+    return 0;
+  }
+
+  function normalizeRow(r) {
+    if (r.predictions && r.predictions.length) {
+      const mainIdx = pickMainPredictionIndex(r.predictions);
+      const main = r.predictions[mainIdx];
+      const others = r.predictions.filter((_, i) => i !== mainIdx);
+      return {
+        field: r.field,
+        displayAnn: r.displayAnn,
+        rawAnn: r.rawAnn,
+        displayPred: main.displayPred,
+        rawPred: main.rawPred,
+        hitStage: main.hitStage,
+        multi: true,
+        others,
+        mainPredLabel: main.predLabel
+      };
+    }
+    return { ...r, multi: false, others: [] };
+  }
+
+  const normalizedRows = rows.map(normalizeRow);
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function escapeAttr(s) {
+    return String(s).replace(/\\/g, "\\\\").replace(/"/g, "&quot;");
+  }
+
+  const tbody = document.getElementById("resultBody");
+
+  normalizedRows.forEach((nr, rowIndex) => {
+    const tr = document.createElement("tr");
+    tr.className = "data-row";
+    if (nr.hitStage === "未命中") tr.classList.add("row-miss");
+
+    const hasExpand = nr.multi && nr.others.length > 0;
+    if (hasExpand) {
+      tr.classList.add("row-expandable");
+      tr.dataset.rowIndex = String(rowIndex);
+    }
+
+    const predCellInner = `<span class="tip-anchor cell-tip" data-tip="${escapeAttr(tipPred(nr.rawPred))}">${escapeHtml(nr.displayPred)}</span>`;
+
+    const fieldCellInner = hasExpand
+      ? `<span class="field-cell-expand" title="点击本行展开或收起其余 ${nr.others.length} 条预测">
+          <span class="field-name">${escapeHtml(nr.field)}</span>
+          <span class="multi-extra">
+            <span class="multi-badge">+${nr.others.length}</span>
+            <span class="field-chevron" aria-hidden="true">▼</span>
+          </span>
+        </span>`
+      : escapeHtml(nr.field);
+
+    tr.innerHTML = `
+      <td>${fieldCellInner}</td>
+      <td>
+        <span class="tip-anchor cell-tip" data-tip="${escapeAttr(tipAnn(nr.rawAnn))}">${escapeHtml(nr.displayAnn)}</span>
+      </td>
+      <td>${predCellInner}</td>
+      <td class="col-hit ${hitClass(nr.hitStage)}">${escapeHtml(nr.hitStage)}</td>
+    `;
+    tbody.appendChild(tr);
+
+    if (hasExpand) {
+      const detailRows = [];
+
+      const bannerTr = document.createElement("tr");
+      bannerTr.className = "detail-sub detail-sub-banner";
+      bannerTr.style.display = "none";
+      bannerTr.innerHTML = `
+        <td colspan="4">
+          <span class="detail-sub-cap">其余预测 <span class="sub-meta">·</span> 主行当前为 <em>${escapeHtml(nr.mainPredLabel || "—")}</em></span>
+        </td>
+      `;
+      detailRows.push(bannerTr);
+      tbody.appendChild(bannerTr);
+
+      nr.others.forEach((p) => {
+        const subTr = document.createElement("tr");
+        subTr.className = "detail-sub detail-sub-line";
+        subTr.style.display = "none";
+        subTr.innerHTML = `
+          <td><span class="sub-pred-tag">${escapeHtml(p.predLabel)}</span></td>
+          <td><span class="sub-dash">—</span></td>
+          <td>
+            <div class="sub-pred-stack">
+              <span class="tip-anchor cell-tip" data-tip="${escapeAttr(tipPred(p.rawPred))}">${escapeHtml(p.displayPred)}</span>
+              <span class="sub-raw-line">原始预测：${escapeHtml(p.rawPred)}</span>
+            </div>
+          </td>
+          <td class="col-hit ${hitClass(p.hitStage)}">${escapeHtml(p.hitStage)}</td>
+        `;
+        detailRows.push(subTr);
+        tbody.appendChild(subTr);
+      });
+
+      tr.addEventListener("click", (e) => {
+        if (e.target.closest(".tip-anchor")) return;
+        const open = detailRows[0].style.display !== "none";
+        detailRows.forEach((row) => {
+          row.style.display = open ? "none" : "table-row";
+        });
+        tr.classList.toggle("expanded", !open);
+      });
+    }
+  });
+
+  document.getElementById("jsonOut").textContent = JSON.stringify(
+    rows.map((r) => {
+      if (r.predictions) {
+        return {
+          字段: r.field,
+          标注_展示: r.displayAnn,
+          标注_原始: r.rawAnn,
+          多预测: r.predictions
+        };
+      }
+      return {
+        字段: r.field,
+        标注_展示: r.displayAnn,
+        标注_原始: r.rawAnn,
+        预测_展示: r.displayPred,
+        预测_原始: r.rawPred,
+        命中阶段: r.hitStage
+      };
+    }),
+    null,
+    2
+  );
+
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const id = btn.getAttribute("data-panel");
+      document.getElementById("panel-result").classList.toggle("hidden", id !== "result");
+      document.getElementById("panel-json").classList.toggle("hidden", id !== "json");
+    });
+  });
+</script>
+
+</body>
+</html>
