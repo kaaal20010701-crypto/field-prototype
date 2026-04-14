@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字段配置</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; background: #f5f6f7; display: flex; justify-content: center; padding: 40px; }
+
+  .panel {
+    width: 560px; background: #fff; border-radius: 10px;
+    border: 1px solid #e5e6eb; overflow: hidden;
+  }
+
+  /* 面板头 */
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer;
+    user-select: none;
+  }
+  .panel-header-left { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #1d2129; }
+  .panel-header-left .arr { font-size: 10px; color: #86909c; transition: transform .2s; }
+  .panel-header-left .arr.collapsed { transform: rotate(-90deg); }
+  .panel-header-right { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 28px; height: 28px; border: 1px solid #e5e6eb; border-radius: 6px;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #86909c; font-size: 13px; transition: all .15s;
+  }
+  .icon-btn:hover { border-color: #4080ff; color: #4080ff; }
+
+  .panel-body { padding: 0 20px 20px; }
+  .panel-body.collapsed { display: none; }
+
+  /* 区块标题 */
+  .section-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #4e5969; font-weight: 500;
+    margin: 16px 0 10px;
+  }
+  .section-title:first-child { margin-top: 16px; }
+  .help-dot {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 1px solid #c9cdd4; color: #86909c;
+    font-size: 10px; cursor: help; position: relative;
+  }
+  .help-dot .tip {
+    display: none; position: absolute; left: calc(100% + 8px); top: 50%;
+    transform: translateY(-50%); background: #1d2129; color: #fff;
+    font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: 6px;
+    white-space: nowrap; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  .help-dot .tip::before {
+    content: ''; position: absolute; right: 100%; top: 50%;
+    transform: translateY(-50%); border: 5px solid transparent; border-right-color: #1d2129;
+  }
+  .help-dot:hover .tip { display: block; }
+
+  /* 标签输入区 */
+  .tag-area {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 10px 12px; background: #fafbfc; border: 1px solid #e5e6eb;
+    border-radius: 8px; min-height: 42px; cursor: text;
+  }
+  .tag-area:focus-within { border-color: #4080ff; }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 6px 3px 10px; background: #f2f3f5; border-radius: 4px;
+    font-size: 13px; color: #1d2129; cursor: pointer; user-select: none;
+    transition: background .15s;
+  }
+  .tag:hover { background: #e8e9ec; }
+  .tag.active { background: #e8f3ff; color: #4080ff; }
+  .tag .x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border: none; background: none;
+    color: #86909c; font-size: 12px; cursor: pointer; border-radius: 50%;
+    line-height: 1;
+  }
+  .tag .x:hover { background: #c9cdd4; color: #fff; }
+  .tag.active .x:hover { background: #4080ff; color: #fff; }
+
+  .tag-input {
+    border: none; outline: none; font-size: 13px; color: #1d2129;
+    min-width: 80px; flex: 1; padding: 3px 0; background: transparent;
+  }
+  .tag-input::placeholder { color: #c0c4cc; }
+
+  /* 组合字段 */
+  .combo-section { margin-top: 16px; }
+  .combo-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .combo-header-left { display: flex; align-items: center; gap: 6px; }
+  .add-combo-btn {
+    width: 24px; height: 24px; border: 1px solid #e5e6eb; border-radius: 50%;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #86909c; font-size: 16px; transition: all .15s;
+  }
+  .add-combo-btn:hover { border-color: #4080ff; color: #4080ff; }
+
+  .combo-card {
+    background: #fafbfc; border: 1px solid #e5e6eb; border-radius: 8px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .combo-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .combo-name {
+    font-size: 13px; color: #1d2129; font-weight: 500;
+  }
+  .combo-actions { display: flex; gap: 4px; }
+  .combo-icon-btn {
+    width: 24px; height: 24px; border: none; border-radius: 4px;
+    background: none; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #c0c4cc; font-size: 13px; transition: all .15s;
+  }
+  .combo-icon-btn:hover { background: #f2f3f5; color: #86909c; }
+  .combo-icon-btn.danger:hover { color: #f53f3f; background: #fff1f0; }
+
+  .combo-tag-area {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 8px 10px; background: #fff; border: 1px solid #e5e6eb;
+    border-radius: 6px; min-height: 38px; cursor: text;
+  }
+  .combo-tag-area:focus-within { border-color: #4080ff; }
+
+  /* ===== 更多设置展开区 ===== */
+  .field-settings {
+    display: none; background: #fff; border: 1px solid #e5e6eb;
+    border-radius: 8px; margin-top: 8px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .field-settings.open { display: block; }
+
+  .fs-top {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;
+  }
+  .fs-top-label { font-size: 12px; color: #86909c; }
+  .fs-top-select {
+    padding: 4px 22px 4px 8px; border: 1px solid #e5e6eb; border-radius: 6px;
+    font-size: 12px; color: #1d2129;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2386909c' fill='none' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat right 6px center;
+    appearance: none; cursor: pointer; outline: none; min-width: 80px;
+  }
+  .fs-top-select:focus { border-color: #4080ff; }
+
+  .fs-name {
+    font-size: 13px; color: #1d2129; font-weight: 500;
+    margin-left: auto;
+    padding: 2px 8px; background: #f2f3f5; border-radius: 4px;
+  }
+
+  .fs-type-content { display: none; }
+  .fs-type-content.active { display: block; }
+
+  .fs-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .fs-card {
+    background: #fafbfc; border: 1px solid #eeeff1;
+    border-radius: 8px; padding: 12px 14px;
+  }
+
+  .fs-sh {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .fs-sl { font-size: 12px; color: #1d2129; font-weight: 500; }
+
+  .toggle { position: relative; width: 30px; height: 17px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider {
+    position: absolute; inset: 0; background: #c9cdd4;
+    border-radius: 17px; cursor: pointer; transition: background .2s;
+  }
+  .toggle .slider::before {
+    content: ''; position: absolute;
+    width: 13px; height: 13px; left: 2px; top: 2px;
+    background: #fff; border-radius: 50%; transition: transform .2s;
+  }
+  .toggle input:checked + .slider { background: #4080ff; }
+  .toggle input:checked + .slider::before { transform: translateX(13px); }
+
+  .fs-sb { overflow: hidden; max-height: 0; opacity: 0; transition: max-height .25s, opacity .2s; }
+  .fs-sb.on { max-height: 600px; opacity: 1; }
+
+  .fs-sub {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 0; font-size: 11px; color: #4e5969;
+  }
+
+  .fs-rg { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+  .fs-rg label {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; color: #4e5969; cursor: pointer;
+    padding: 3px 8px; border: 1px solid #e5e6eb;
+    border-radius: 4px; background: #fff; transition: all .15s;
+  }
+  .fs-rg label:hover { border-color: #4080ff; color: #4080ff; }
+  .fs-rg input[type="radio"] { display: none; }
+  .fs-rg label:has(input:checked) { border-color: #4080ff; background: #f0f5ff; color: #4080ff; }
+  .fs-rg.disabled label { opacity: .4; pointer-events: none; }
+
+  .fs-hint { font-size: 10px; color: #86909c; margin-bottom: 3px; }
+
+  .fs-replace {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 3px;
+  }
+  .fs-ri {
+    width: 52px; padding: 3px 5px; border: 1px solid #e5e6eb;
+    border-radius: 4px; font-size: 11px; color: #1d2129; outline: none; text-align: center;
+  }
+  .fs-ri:focus { border-color: #4080ff; }
+  .fs-rt { font-size: 11px; color: #86909c; white-space: nowrap; }
+  .fs-fi { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+  .fs-af {
+    width: 18px; height: 18px; border: 1px dashed #c9cdd4; border-radius: 3px;
+    background: #fff; color: #86909c; font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fs-af:hover { border-color: #4080ff; color: #4080ff; }
+
+  .fs-si {
+    width: 32px; padding: 2px 3px; border: 1px solid #e5e6eb;
+    border-radius: 3px; font-size: 11px; color: #1d2129; outline: none; text-align: center;
+  }
+  .fs-si:focus { border-color: #4080ff; }
+
+  .fs-ht {
+    position: relative; display: inline-flex; align-items: center;
+    justify-content: center; width: 13px; height: 13px; border-radius: 50%;
+    background: #e5e6eb; color: #86909c; font-size: 9px; font-weight: 600;
+    cursor: help; flex-shrink: 0; margin-left: 3px;
+  }
+  .fs-ht .fs-tc {
+    display: none; position: absolute; left: calc(100% + 8px); top: 50%;
+    transform: translateY(-50%); background: #1d2129; color: #fff;
+    font-size: 11px; font-weight: 400; line-height: 1.8;
+    padding: 8px 12px; border-radius: 6px; white-space: nowrap;
+    z-index: 300; box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  .fs-ht .fs-tc::before {
+    content: ''; position: absolute; right: 100%; top: 50%;
+    transform: translateY(-50%); border: 5px solid transparent; border-right-color: #1d2129;
+  }
+  .fs-ht:hover .fs-tc { display: block; }
+
+  .fs-fmt { display: flex; flex-direction: column; gap: 4px; margin-top: 3px; }
+  .fs-fmt label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: #4e5969; cursor: pointer;
+    padding: 4px 8px; border: 1px solid #e5e6eb;
+    border-radius: 4px; background: #fff; transition: all .15s;
+  }
+  .fs-fmt label:hover { border-color: #4080ff; color: #4080ff; }
+  .fs-fmt input[type="radio"] { display: none; }
+  .fs-fmt label:has(input:checked) { border-color: #4080ff; background: #f0f5ff; color: #4080ff; }
+  .fs-fmt-ex { font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; }
+
+  /* 字段列表 - 默认隐藏 */
+  .field-list {
+    border: 1px solid #e5e6eb; border-top: none;
+    border-radius: 0 0 8px 8px; overflow: hidden;
+    margin-top: -1px;
+    display: none;
+  }
+  .field-list.visible { display: block; }
+  .fl-header {
+    display: grid; grid-template-columns: 1fr 1fr 80px;
+    background: #fafbfc; border-bottom: 1px solid #e5e6eb;
+    font-size: 11px; color: #86909c; font-weight: 500;
+  }
+  .fl-header .fl-th {
+    padding: 6px 12px; display: flex; align-items: center; gap: 4px;
+  }
+  .fl-header .fl-th:not(:last-child) { border-right: 1px solid #f0f0f0; }
+
+  .fl-row-wrap { border-bottom: 1px solid #f0f0f0; }
+  .fl-row-wrap:last-child { border-bottom: none; }
+
+  .fl-row {
+    display: grid; grid-template-columns: 1fr 1fr 80px;
+  }
+  .fl-row .fl-td {
+    padding: 7px 12px; font-size: 12px; color: #1d2129;
+    display: flex; align-items: center;
+  }
+  .fl-row .fl-td:not(:last-child) { border-right: 1px solid #f0f0f0; }
+
+  .fl-settings-link {
+    font-size: 12px; color: #4080ff; cursor: pointer;
+    background: none; border: none; display: flex; align-items: center; gap: 3px;
+  }
+  .fl-settings-link:hover { color: #306cd7; }
+  .fl-settings-link .fl-arr { font-size: 10px; transition: transform .2s; }
+  .fl-row-wrap.active .fl-settings-link .fl-arr { transform: rotate(90deg); }
+  .fl-row-wrap.active .fl-settings-link { color: #306cd7; }
+
+  /* 行内展开的设置面板 */
+  .fl-row-settings {
+    display: none; background: #fafbfc;
+    border-top: 1px solid #f0f0f0;
+    padding: 16px;
+  }
+  .fl-row-wrap.active .fl-row-settings { display: block; }
+  .fl-desc-input {
+    width: 100%; border: none; outline: none; font-size: 12px;
+    color: #1d2129; background: transparent;
+  }
+  .fl-desc-input::placeholder { color: #c0c4cc; }
+
+  .tag-input-hint {
+    font-size: 11px; color: #c0c4cc; padding: 4px 0 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <div class="panel-header" onclick="togglePanelBody()">
+    <div class="panel-header-left">
+      <span class="arr" id="panelArrow">&#9662;</span>
+      字段配置
+    </div>
+    <div class="panel-header-right" onclick="event.stopPropagation()">
+      <button class="icon-btn" title="复制">&#9111;</button>
+      <button class="icon-btn" title="粘贴">&#9112;</button>
+    </div>
+  </div>
+
+  <div class="panel-body" id="panelBody">
+    <!-- 单个字段 -->
+    <div class="section-title">
+      单个字段
+      <span class="help-dot">?<span class="tip">在输入框中输入字段名称，按回车添加</span></span>
+    </div>
+    <div class="tag-area" onclick="this.querySelector('.tag-input').focus()">
+      <span class="tag" data-name="产品类别名称" onclick="openSettings(this)">产品类别名称<button class="x" onclick="removeTag(event,this)">&times;</button></span>
+      <span class="tag" data-name="制造商名称" onclick="openSettings(this)">制造商名称<button class="x" onclick="removeTag(event,this)">&times;</button></span>
+      <input class="tag-input" placeholder="输入抽取字段后回车确认" onkeydown="addTag(event,this)">
+    </div>
+    <div class="field-list" id="singleFieldList">
+      <div class="fl-header">
+        <div class="fl-th">字段</div>
+        <div class="fl-th">说明 <span class="help-dot">?<span class="tip">为字段添加说明，帮助更准确地提取</span></span></div>
+        <div class="fl-th">更多设置</div>
+      </div>
+      <div class="fl-row-wrap" data-name="产品类别名称">
+        <div class="fl-row">
+          <div class="fl-td">产品类别名称</div>
+          <div class="fl-td"><input class="fl-desc-input" placeholder="请输入"></div>
+          <div class="fl-td"><button class="fl-settings-link" onclick="openSettingsFromList(this,'single')">设置 <span class="fl-arr">&#8250;</span></button></div>
+        </div>
+        <div class="fl-row-settings"></div>
+      </div>
+      <div class="fl-row-wrap" data-name="制造商名称">
+        <div class="fl-row">
+          <div class="fl-td">制造商名称</div>
+          <div class="fl-td"><input class="fl-desc-input" placeholder="请输入"></div>
+          <div class="fl-td"><button class="fl-settings-link" onclick="openSettingsFromList(this,'single')">设置 <span class="fl-arr">&#8250;</span></button></div>
+        </div>
+        <div class="fl-row-settings"></div>
+      </div>
+    </div>
+
+    <!-- 组合字段 -->
+    <div class="combo-section">
+      <div class="combo-header">
+        <div class="combo-header-left">
+          <span class="section-title" style="margin:0">组合字段</span>
+          <span class="help-dot">?<span class="tip">将多个字段组合为一个输出结果</span></span>
+        </div>
+        <button class="add-combo-btn" onclick="addCombo()" title="添加组合">+</button>
+      </div>
+
+      <div id="comboList">
+        <div class="combo-card">
+          <div class="combo-card-header">
+            <span class="combo-name">组合1</span>
+            <div class="combo-actions">
+              <button class="combo-icon-btn" title="复制">&#9111;</button>
+              <button class="combo-icon-btn danger" title="删除" onclick="removeCombo(this)">&#9675;</button>
+            </div>
+          </div>
+          <div class="combo-tag-area" onclick="this.querySelector('.tag-input').focus()">
+            <span class="tag" data-name="产品类别名称" onclick="openComboSettings(this)">产品类别名称<button class="x" onclick="removeTag(event,this)">&times;</button></span>
+            <span class="tag" data-name="制造商名称" onclick="openComboSettings(this)">制造商名称<button class="x" onclick="removeTag(event,this)">&times;</button></span>
+            <input class="tag-input" placeholder="输入抽取字段后回车确认" onkeydown="addTag(event,this)">
+          </div>
+          <div class="field-list">
+            <div class="fl-header">
+              <div class="fl-th">字段</div>
+              <div class="fl-th">说明 <span class="help-dot">?<span class="tip">为字段添加说明</span></span></div>
+              <div class="fl-th">更多设置</div>
+            </div>
+            <div class="fl-row-wrap" data-name="产品类别名称">
+              <div class="fl-row">
+                <div class="fl-td">产品类别名称</div>
+                <div class="fl-td"><input class="fl-desc-input" placeholder="请输入"></div>
+                <div class="fl-td"><button class="fl-settings-link" onclick="openSettingsFromList(this,'combo')">设置 <span class="fl-arr">&#8250;</span></button></div>
+              </div>
+              <div class="fl-row-settings"></div>
+            </div>
+            <div class="fl-row-wrap" data-name="制造商名称">
+              <div class="fl-row">
+                <div class="fl-td">制造商名称</div>
+                <div class="fl-td"><input class="fl-desc-input" placeholder="请输入"></div>
+                <div class="fl-td"><button class="fl-settings-link" onclick="openSettingsFromList(this,'combo')">设置 <span class="fl-arr">&#8250;</span></button></div>
+              </div>
+              <div class="fl-row-settings"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let uid = 0;
+
+  function buildSettingsHTML(name, id) {
+    return `
+    <div class="fs-top">
+      <span class="fs-top-label">字段类型</span>
+      <select class="fs-top-select" onchange="switchFsType(this)">
+        <option value="text" selected>文本</option>
+        <option value="number">数值</option>
+        <option value="time">时间</option>
+      </select>
+      <span class="fs-name">${name}</span>
+    </div>
+    <div class="fs-type-content active" data-type="text">
+      <div class="fs-cards">
+        <div class="fs-card">
+          <div class="fs-sh"><span class="fs-sl">转换功能</span><label class="toggle"><input type="checkbox" onchange="fsToggle(this)"><span class="slider"></span></label></div>
+          <div class="fs-sb">
+            <div class="fs-sub"><label class="toggle" style="margin-right:3px"><input type="checkbox" onchange="fsSubToggle(this)"><span class="slider"></span></label><span>全角半角转换</span></div>
+            <div class="fs-rg disabled" data-ctl style="margin:3px 0 8px 36px"><label><input type="radio" name="w${id}" value="h"><span>全角转半角</span></label><label><input type="radio" name="w${id}" value="f"><span>半角转全角</span></label></div>
+            <div class="fs-sub"><label class="toggle" style="margin-right:3px"><input type="checkbox" onchange="fsSubToggle(this)"><span class="slider"></span></label><span>大小写转换</span></div>
+            <div class="fs-rg disabled" data-ctl style="margin:3px 0 0 36px"><label><input type="radio" name="c${id}" value="l"><span>大写转小写</span></label><label><input type="radio" name="c${id}" value="u"><span>小写转大写</span></label></div>
+          </div>
+        </div>
+        <div class="fs-card">
+          <div class="fs-sh"><div style="display:flex;align-items:center"><span class="fs-sl">自定义替换</span><span class="fs-ht">?<span class="fs-tc">常见映射参考：<br>【空格】替换为【null】<br>【/】替换为【null】<br>【,】替换为【null】<br>【;】替换为【null】<br>【.】替换为【null】<br>【圆】替换为【元】</span></span></div><label class="toggle"><input type="checkbox" onchange="fsToggle(this)"><span class="slider"></span></label></div>
+          <div class="fs-sb"><div class="fs-hint">将匹配字符替换为指定字符</div><div class="fs-replace"><span class="fs-rt">将</span><div class="fs-fi"><input class="fs-ri" placeholder="原字符"><button class="fs-af" onclick="fsAddFrom(this)">+</button></div><span class="fs-rt">替换为</span><input class="fs-ri" style="width:56px" placeholder="目标"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="fs-type-content" data-type="number">
+      <div class="fs-cards">
+        <div class="fs-card">
+          <div class="fs-sh"><span class="fs-sl">常规数值类型</span><label class="toggle"><input type="checkbox" onchange="fsToggle(this)"><span class="slider"></span></label></div>
+          <div class="fs-sb">
+            <div class="fs-sub"><label class="toggle" style="margin-right:3px"><input type="checkbox" onchange="fsSubToggle(this)"><span class="slider"></span></label><span>小数位数处理</span></div>
+            <div class="fs-rg disabled" data-ctl style="margin:3px 0 8px 36px"><label><input type="radio" name="d${id}" value="k"><span>保留小数 <input class="fs-si" value="2" onclick="event.stopPropagation()"> 位</span></label><label><input type="radio" name="d${id}" value="t"><span>省去末尾的0</span></label></div>
+            <div class="fs-sub"><label class="toggle" style="margin-right:3px"><input type="checkbox" onchange="fsSubToggle(this)"><span class="slider"></span></label><span>显示千位分隔符</span></div>
+            <div class="fs-sub" style="margin-top:2px"><label class="toggle" style="margin-right:3px"><input type="checkbox" onchange="fsSubToggle(this)"><span class="slider"></span></label><span>单位去除</span></div>
+          </div>
+        </div>
+        <div class="fs-card">
+          <div class="fs-sh"><span class="fs-sl">中文金额转换</span><label class="toggle"><input type="checkbox" onchange="fsToggle(this)"><span class="slider"></span></label></div>
+          <div class="fs-sb"><div class="fs-rg" style="margin-top:3px"><label><input type="radio" name="y${id}" value="u"><span>大写</span></label><label><input type="radio" name="y${id}" value="l"><span>小写</span></label></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="fs-type-content" data-type="time">
+      <div class="fs-cards">
+        <div class="fs-card">
+          <div class="fs-sh"><span class="fs-sl">输出格式</span><label class="toggle"><input type="checkbox" checked onchange="fsToggle(this)"><span class="slider"></span></label></div>
+          <div class="fs-sb on">
+            <div class="fs-fmt">
+              <label><input type="radio" name="f${id}" value="1" checked><span class="fs-fmt-ex">YYYY/MM/DD</span></label>
+              <label><input type="radio" name="f${id}" value="2"><span class="fs-fmt-ex">YYYY-MM-DD</span></label>
+              <label><input type="radio" name="f${id}" value="3"><span class="fs-fmt-ex">YYYY年MM月DD日</span></label>
+              <label><input type="radio" name="f${id}" value="4"><span class="fs-fmt-ex">二零二三年十月二十七日</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // 面板折叠
+  function togglePanelBody() {
+    document.getElementById('panelBody').classList.toggle('collapsed');
+    document.getElementById('panelArrow').classList.toggle('collapsed');
+  }
+
+  // 找到对应的 field-list
+  function getFieldList(area) {
+    // 对于单个字段，list 紧接在 tag-area 后面
+    // 对于组合字段，list 在 combo-tag-area 后面
+    let el = area.nextElementSibling;
+    while (el && !el.classList.contains('field-list')) el = el.nextElementSibling;
+    return el;
+  }
+
+  // 添加标签
+  function addTag(e, input) {
+    if (e.key !== 'Enter') return;
+    const val = input.value.trim();
+    if (!val) return;
+    const area = input.closest('.tag-area, .combo-tag-area');
+    for (const t of area.querySelectorAll('.tag')) {
+      if (t.dataset.name === val) { input.value = ''; return; }
+    }
+    const tag = document.createElement('span');
+    tag.className = 'tag'; tag.dataset.name = val;
+    const isCombo = area.classList.contains('combo-tag-area');
+    tag.onclick = function() { isCombo ? openComboSettings(this) : openSettings(this); };
+    tag.innerHTML = `${val}<button class="x" onclick="removeTag(event,this)">&times;</button>`;
+    input.before(tag);
+    input.value = '';
+
+    // 同步添加列表行
+    const list = getFieldList(area);
+    if (list) {
+      const type = isCombo ? 'combo' : 'single';
+      const wrap = document.createElement('div');
+      wrap.className = 'fl-row-wrap'; wrap.dataset.name = val;
+      wrap.innerHTML = `<div class="fl-row"><div class="fl-td">${val}</div><div class="fl-td"><input class="fl-desc-input" placeholder="请输入"></div><div class="fl-td"><button class="fl-settings-link" onclick="openSettingsFromList(this,'${type}')">设置 <span class="fl-arr">&#8250;</span></button></div></div><div class="fl-row-settings"></div>`;
+      list.appendChild(wrap);
+    }
+  }
+
+  // 删除标签
+  function removeTag(e, btn) {
+    e.stopPropagation();
+    const tag = btn.closest('.tag');
+    const name = tag.dataset.name;
+    const area = tag.closest('.tag-area, .combo-tag-area');
+
+    // 同步删除列表行（包含行内设置面板）
+    const list = getFieldList(area);
+    if (list) {
+      const wrap = list.querySelector(`.fl-row-wrap[data-name="${name}"]`);
+      if (wrap) wrap.remove();
+    }
+
+    tag.remove();
+  }
+
+  // 从列表"设置"按钮打开行内设置面板
+  function openSettingsFromList(btn, type) {
+    const wrap = btn.closest('.fl-row-wrap');
+    const name = wrap.dataset.name;
+    const settings = wrap.querySelector('.fl-row-settings');
+    const isActive = wrap.classList.contains('active');
+
+    // 关闭同列表内其他已打开的
+    wrap.closest('.field-list').querySelectorAll('.fl-row-wrap.active').forEach(w => {
+      if (w !== wrap) {
+        w.classList.remove('active');
+        w.querySelector('.fl-row-settings').innerHTML = '';
+      }
+    });
+
+    // 点击已打开的则收起
+    if (isActive) {
+      wrap.classList.remove('active');
+      settings.innerHTML = '';
+      return;
+    }
+
+    wrap.classList.add('active');
+    uid++;
+    settings.innerHTML = buildSettingsHTML(name, uid);
+  }
+
+  // 单个字段 - 点击标签显示列表
+  function openSettings(tag) {
+    const area = tag.closest('.tag-area');
+    const list = getFieldList(area);
+    if (list) list.classList.add('visible');
+    // 高亮当前标签
+    area.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+  }
+
+  // 组合字段 - 点击标签显示列表
+  function openComboSettings(tag) {
+    const area = tag.closest('.combo-tag-area');
+    const list = getFieldList(area);
+    if (list) list.classList.add('visible');
+    area.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+  }
+
+  // 点击面板外部时隐藏列表和设置面板
+  document.addEventListener('mousedown', (e) => {
+    // 单个字段区域
+    const singleArea = document.querySelector('.tag-area');
+    const singleList = document.getElementById('singleFieldList');
+
+    if (singleArea && singleList && !singleArea.contains(e.target) && !singleList.contains(e.target)) {
+      singleList.classList.remove('visible');
+      singleList.querySelectorAll('.fl-row-wrap.active').forEach(w => { w.classList.remove('active'); w.querySelector('.fl-row-settings').innerHTML = ''; });
+      if (singleArea) singleArea.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+    }
+
+    // 组合字段区域
+    document.querySelectorAll('.combo-card').forEach(card => {
+      const area = card.querySelector('.combo-tag-area');
+      const list = card.querySelector('.field-list');
+      if (area && list && !area.contains(e.target) && !list.contains(e.target)) {
+        list.classList.remove('visible');
+        list.querySelectorAll('.fl-row-wrap.active').forEach(w => { w.classList.remove('active'); w.querySelector('.fl-row-settings').innerHTML = ''; });
+        area.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+      }
+    });
+  });
+
+  // 添加组合
+  let comboCount = 1;
+  function addCombo() {
+    comboCount++;
+    const list = document.getElementById('comboList');
+    const card = document.createElement('div');
+    card.className = 'combo-card';
+    card.innerHTML = `
+      <div class="combo-card-header">
+        <span class="combo-name">组合${comboCount}</span>
+        <div class="combo-actions">
+          <button class="combo-icon-btn" title="复制">&#9111;</button>
+          <button class="combo-icon-btn danger" title="删除" onclick="removeCombo(this)">&#9675;</button>
+        </div>
+      </div>
+      <div class="combo-tag-area" onclick="this.querySelector('.tag-input').focus()">
+        <input class="tag-input" placeholder="输入抽取字段后回车确认" onkeydown="addTag(event,this)">
+      </div>
+      <div class="field-list">
+        <div class="fl-header">
+          <div class="fl-th">字段</div>
+          <div class="fl-th">说明</div>
+          <div class="fl-th">更多设置</div>
+        </div>
+      </div>
+      <div class="field-settings"></div>`;
+    list.appendChild(card);
+  }
+
+  function removeCombo(btn) {
+    const card = btn.closest('.combo-card');
+    const list = card.parentElement;
+    if (list.querySelectorAll('.combo-card').length > 1) card.remove();
+  }
+
+  // 设置面板交互
+  function switchFsType(sel) {
+    const panel = sel.closest('.field-settings');
+    panel.querySelectorAll('.fs-type-content').forEach(c => c.classList.toggle('active', c.dataset.type === sel.value));
+  }
+
+  function fsToggle(cb) {
+    cb.closest('.fs-card').querySelector('.fs-sb').classList.toggle('on', cb.checked);
+  }
+
+  function fsSubToggle(cb) {
+    const next = cb.closest('.fs-sub').nextElementSibling;
+    if (next && next.hasAttribute('data-ctl')) next.classList.toggle('disabled', !cb.checked);
+  }
+
+  function fsAddFrom(btn) {
+    const i = document.createElement('input');
+    i.className = 'fs-ri'; i.placeholder = '原字符';
+    btn.parentElement.insertBefore(i, btn); i.focus();
+  }
+</script>
+
+</body>
+</html>
